@@ -1,6 +1,7 @@
 package com.Spring.LocalizaISP.domain.model;
 
 import com.Spring.LocalizaISP.domain.enums.TipoUsuario;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -23,7 +24,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "usuarios")
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,8 +31,9 @@ import java.util.UUID;
 public class Usuario {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.UUID)
-	private UUID id;
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
 
 	private String nome;
 
@@ -41,7 +42,8 @@ public class Usuario {
 	private String senha;
 
 	@Enumerated(EnumType.STRING)
-	private TipoUsuario tipo = TipoUsuario.USUARIO;
+
+	private TipoUsuario role = TipoUsuario.USUARIO;
 
 	private LocalDateTime criadoEm;
 
@@ -55,5 +57,6 @@ public class Usuario {
 
 	@OneToMany(mappedBy = "usuario")
 	private List<InformacaoContato> informacoesContato = new ArrayList<>();
+
 
 }

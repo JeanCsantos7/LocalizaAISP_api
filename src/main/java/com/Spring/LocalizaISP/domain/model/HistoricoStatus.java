@@ -29,8 +29,8 @@ import java.util.UUID;
 public class HistoricoStatus {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.UUID)
-	private UUID id;
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
 	@Enumerated(EnumType.STRING)
 	private StatusCaso statusAnterior;

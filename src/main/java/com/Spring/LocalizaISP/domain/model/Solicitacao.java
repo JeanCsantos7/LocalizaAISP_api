@@ -30,8 +30,8 @@ import java.util.UUID;
 public class Solicitacao {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.UUID)
-	private UUID id;
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
 	@Enumerated(EnumType.STRING)
 	private TipoSolicitacao tipo;

@@ -28,8 +28,8 @@ import java.util.UUID;
 public class InformacaoContato {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.UUID)
-	private UUID id;
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
 	private String nome;
 
@@ -48,7 +48,7 @@ public class InformacaoContato {
 	@JoinColumn(name = "caso_id", nullable = false)
 	private Caso caso;
 
-	// Opcional: visitantes tambem podem enviar informacoes
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "usuario_id")
 	private Usuario usuario;
