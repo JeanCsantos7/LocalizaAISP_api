@@ -47,4 +47,8 @@ public class HistoricoStatus {
 	@JoinColumn(name = "caso_id", nullable = false)
 	private Caso caso;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "responsavel_id")
+	private Usuario responsavel;
+
 }

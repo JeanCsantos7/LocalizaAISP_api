@@ -5,7 +5,7 @@ import com.Spring.LocalizaISP.domain.enums.TipoSolicitacao;
 import java.util.UUID;
 
 public record SolicitacaoRequest(
-		UUID casoId,
+		Long casoId,
 		TipoSolicitacao tipo,
 		String motivo,
 		String descricao

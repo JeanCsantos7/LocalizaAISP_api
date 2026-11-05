@@ -1,5 +1,7 @@
 package com.Spring.LocalizaISP.infrastructure.config;
 
+import com.Spring.LocalizaISP.domain.model.Usuario;
+import com.Spring.LocalizaISP.infrastructure.repository.UsuarioRepository;
 import io.jsonwebtoken.Claims;
 
 import io.jsonwebtoken.Jwts;
@@ -9,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.AccessDeniedException;
 import java.security.Key;
 import java.util.Date;
 
@@ -20,11 +23,13 @@ public class JWTService {
     @Value("${jwt_secret}")
     private String SECRET;
 
+
     private Key getKeySecret() {
         return Keys.hmacShaKeyFor(SECRET.getBytes());
     }
 
     public String generateJWT(String email, String role) {
+
 
 
         return Jwts.builder()

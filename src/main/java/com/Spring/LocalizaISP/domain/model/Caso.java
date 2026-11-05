@@ -39,6 +39,10 @@ public class Caso {
 
 	private String titulo;
 
+	private String nomePessoa;
+
+	private String cidade;
+
 	@Column(length = 2000)
 	private String descricao;
 
@@ -56,6 +60,9 @@ public class Caso {
 
 	@Column(length = 2000)
 	private String observacoes;
+
+
+	private String fonteAutorizacao;
 
 	private LocalDateTime criadoEm;
 

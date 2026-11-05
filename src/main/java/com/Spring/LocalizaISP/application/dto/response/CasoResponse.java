@@ -5,20 +5,22 @@ import com.Spring.LocalizaISP.domain.enums.StatusCaso;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 public record CasoResponse(
-		UUID id,
+		Long id,
 		String titulo,
+		String nomePessoa,
 		String descricao,
+		String cidade,
 		String regiao,
 		String faixaEtaria,
 		LocalDate dataDesaparecimento,
 		StatusCaso status,
 		OrigemCaso origem,
+		String fonteAutorizacao,
 		String observacoes,
 		LocalDateTime criadoEm,
 		LocalDateTime atualizadoEm,
-		UUID usuarioId
+		Long usuarioId
 ) {
 }
