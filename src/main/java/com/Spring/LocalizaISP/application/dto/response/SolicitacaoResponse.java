@@ -4,17 +4,17 @@ import com.Spring.LocalizaISP.domain.enums.StatusSolicitacao;
 import com.Spring.LocalizaISP.domain.enums.TipoSolicitacao;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 public record SolicitacaoResponse(
-		UUID id,
+		Long id,
 		TipoSolicitacao tipo,
 		String motivo,
 		String descricao,
 		StatusSolicitacao status,
+		String resposta,
 		LocalDateTime criadoEm,
 		LocalDateTime respondidoEm,
-		UUID usuarioId,
-		UUID casoId
+		Long usuarioId,
+		Long casoId
 ) {
 }

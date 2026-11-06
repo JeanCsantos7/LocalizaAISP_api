@@ -4,6 +4,7 @@ import com.Spring.LocalizaISP.application.dto.exceptionsDTO.*;
 import com.Spring.LocalizaISP.infrastructure.exception.CasoNaoEncontrado;
 import com.Spring.LocalizaISP.infrastructure.exception.EmailExistente;
 import com.Spring.LocalizaISP.infrastructure.exception.RegraNegocioException;
+import com.Spring.LocalizaISP.infrastructure.exception.SolicitacaoNaoEncontrada;
 import com.Spring.LocalizaISP.infrastructure.exception.UsuarioNaoEncontrado;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -75,6 +76,12 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(CasoNaoEncontrado.class)
     public ResponseEntity<ErrosDTO> casoNaoEncontrado(CasoNaoEncontrado exception) {
+
+        return ResponseEntity.status(404).body(new ErrosDTO(exception.getMessage(), 404));
+    }
+
+    @ExceptionHandler(SolicitacaoNaoEncontrada.class)
+    public ResponseEntity<ErrosDTO> solicitacaoNaoEncontrada(SolicitacaoNaoEncontrada exception) {
 
         return ResponseEntity.status(404).body(new ErrosDTO(exception.getMessage(), 404));
     }

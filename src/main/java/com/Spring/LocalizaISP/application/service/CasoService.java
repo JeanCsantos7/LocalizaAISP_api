@@ -7,16 +7,22 @@ import com.Spring.LocalizaISP.application.dto.response.CasoResponse;
 import com.Spring.LocalizaISP.application.mapper.CasoMapper;
 import com.Spring.LocalizaISP.domain.enums.OrigemCaso;
 import com.Spring.LocalizaISP.domain.enums.StatusCaso;
+import com.Spring.LocalizaISP.domain.enums.StatusSolicitacao;
+import com.Spring.LocalizaISP.domain.enums.TipoSolicitacao;
 import com.Spring.LocalizaISP.domain.enums.TipoUsuario;
 import com.Spring.LocalizaISP.domain.model.Caso;
 import com.Spring.LocalizaISP.domain.model.HistoricoStatus;
+import com.Spring.LocalizaISP.domain.model.Solicitacao;
 import com.Spring.LocalizaISP.domain.model.Usuario;
 import com.Spring.LocalizaISP.infrastructure.exception.CasoNaoEncontrado;
 import com.Spring.LocalizaISP.infrastructure.exception.RegraNegocioException;
 import com.Spring.LocalizaISP.infrastructure.exception.UsuarioNaoEncontrado;
 import com.Spring.LocalizaISP.infrastructure.repository.CasoRepository;
 import com.Spring.LocalizaISP.infrastructure.repository.HistoricoStatusRepository;
+import com.Spring.LocalizaISP.infrastructure.repository.SolicitacaoRepository;
 import com.Spring.LocalizaISP.infrastructure.repository.UsuarioRepository;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -57,6 +63,10 @@ public class CasoService {
 
     private static final List<StatusCaso> STATUS_VISIVEIS = List.of(StatusCaso.PUBLICADO, StatusCaso.LOCALIZADO);
 
+    // solicitação de retirada nesses status oculta o caso da consulta pública até a decisão
+    private static final List<StatusSolicitacao> SOLICITACOES_ABERTAS =
+            List.of(StatusSolicitacao.PENDENTE, StatusSolicitacao.EM_ANALISE);
+
 
     private static final Set<StatusCaso> EXIGEM_JUSTIFICATIVA =
             EnumSet.of(StatusCaso.REJEITADO, StatusCaso.RETIRADO);
@@ -64,6 +74,7 @@ public class CasoService {
     private final CasoRepository casoRepository;
     private final UsuarioRepository usuarioRepository;
     private final HistoricoStatusRepository historicoStatusRepository;
+    private final SolicitacaoRepository solicitacaoRepository;
     private final CasoMapper casoMapper;
 
 
@@ -81,6 +92,7 @@ public class CasoService {
         }
 
         Specification<Caso> filtro = (root, query, cb) -> root.get("status").in(STATUS_VISIVEIS);
+        filtro = filtro.and(semRetiradaEmAberto());
 
         if (temTexto(nome)) {
             String padrao = padraoLike(nome);
@@ -115,6 +127,8 @@ public class CasoService {
     public CasoPublicoResponse buscarPublicadoPorId(Long id) {
         Caso caso = casoRepository.findById(id)
                 .filter(c -> STATUS_VISIVEIS.contains(c.getStatus()))
+                .filter(c -> !solicitacaoRepository.existsByCasoIdAndTipoAndStatusIn(
+                        c.getId(), TipoSolicitacao.RETIRADA, SOLICITACOES_ABERTAS))
                 .orElseThrow(() -> new CasoNaoEncontrado("Caso não localizado!"));
 
         return casoMapper.toPublicoDTO(caso);
@@ -206,6 +220,16 @@ public class CasoService {
     }
 
 
+    // grava no histórico um evento relevante que não muda o status (ex.: ocultação por pedido de retirada)
+    @Transactional
+    public void registrarEvento(Long casoId, String observacao, Long usuarioId) {
+        Caso caso = buscarEntidade(casoId);
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new UsuarioNaoEncontrado("Usuário não localizado!"));
+
+        registrarHistorico(caso, caso.getStatus(), caso.getStatus(), limpar(observacao), usuario);
+    }
+
     @Transactional
     public CasoResponse retirar(Long casoId, String motivo, Long responsavelId) {
         return atualizarStatus(casoId, new AtualizarStatusCasoRequest(StatusCaso.RETIRADO, motivo), responsavelId);
@@ -238,6 +262,19 @@ public class CasoService {
     }
 
 
+
+    // caso com solicitação de RETIRADA em aberto não aparece na consulta pública
+    private Specification<Caso> semRetiradaEmAberto() {
+        return (root, query, cb) -> {
+            Subquery<Long> retiradaAberta = query.subquery(Long.class);
+            Root<Solicitacao> solicitacao = retiradaAberta.from(Solicitacao.class);
+            retiradaAberta.select(solicitacao.<Long>get("id")).where(
+                    cb.equal(solicitacao.get("caso").get("id"), root.get("id")),
+                    cb.equal(solicitacao.get("tipo"), TipoSolicitacao.RETIRADA),
+                    solicitacao.get("status").in(SOLICITACOES_ABERTAS));
+            return cb.not(cb.exists(retiradaAberta));
+        };
+    }
 
     private Caso buscarEntidade(Long id) {
         return casoRepository.findById(id)

@@ -49,6 +49,13 @@ public class Solicitacao {
 
 	private LocalDateTime respondidoEm;
 
+	@Column(length = 2000)
+	private String resposta;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "responsavel_id")
+	private Usuario responsavel;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "usuario_id", nullable = false)
 	private Usuario usuario;
