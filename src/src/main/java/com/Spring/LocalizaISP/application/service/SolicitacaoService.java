@@ -32,14 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-/**
- * Pedidos de correção, retirada ou informação adicional sobre casos já publicados
- * (RF07, RF09, RF12, RN03, RN06, RN07, RN10).
- *
- * Mudanças no caso passam sempre pela CasoService, que continua sendo a única dona das
- * regras de status e do histórico do caso. Enquanto houver solicitação de RETIRADA em aberto,
- * o caso fica oculto da consulta pública (filtro na CasoService), sem alterar o status dele.
- */
+
 @Service
 @RequiredArgsConstructor
 public class SolicitacaoService {
@@ -47,13 +40,13 @@ public class SolicitacaoService {
     private static final int TAMANHO_MAXIMO_PAGINA = 50;
     private static final int LIMITE_CAMPO_LONGO = 2000;
 
-    // a resposta do admin é copiada para o histórico do caso numa retirada, junto de um prefixo
+
     private static final int LIMITE_RESPOSTA = 1800;
 
-    // limite anti-abuso: solicitações em aberto por usuário
-    private static final int MAXIMO_ABERTAS_POR_USUARIO = 10;
 
-    // RF12: qualquer usuário pede correção/retirada/informação de caso publicado
+    private static final int MAXIMO_ABERTAS_POR_USUARIO = 5;
+
+
     private static final Set<StatusCaso> CASOS_SOLICITAVEIS = Set.of(StatusCaso.PUBLICADO, StatusCaso.LOCALIZADO);
 
     private static final List<StatusSolicitacao> ABERTAS = List.of(StatusSolicitacao.PENDENTE, StatusSolicitacao.EM_ANALISE);
@@ -65,7 +58,7 @@ public class SolicitacaoService {
     private final SolicitacaoMapper solicitacaoMapper;
 
 
-    // ------------------------------------------------------------- usuário (RF07, RF12)
+
 
     @Transactional
     public SolicitacaoResponse criar(SolicitacaoRequest dados, Long usuarioId) {
@@ -93,7 +86,7 @@ public class SolicitacaoService {
         solicitacao.setMotivo(limpar(dados.motivo()));
         solicitacao.setDescricao(limpar(dados.descricao()));
 
-        // RN06: o usuário nunca define status nem resposta, tudo isso nasce aqui
+
         solicitacao.setStatus(StatusSolicitacao.PENDENTE);
         solicitacao.setCriadoEm(LocalDateTime.now());
         solicitacao.setRespondidoEm(null);
@@ -102,10 +95,12 @@ public class SolicitacaoService {
 
         Solicitacao salva = solicitacaoRepository.save(solicitacao);
 
-        // retirada em aberto oculta o caso da consulta pública (ver CasoService); fica auditado
-        if (salva.getTipo() == TipoSolicitacao.RETIRADA) {
+
+        // retirada de terceiro só entra na fila (sem ocultar), então não gera evento no caso
+        if (ocultaCaso(salva)) {
             casoService.registrarEvento(caso.getId(),
-                    "Solicitação de retirada #" + salva.getId() + " aberta: caso oculto da consulta pública até a decisão.",
+                    "Solicitação de retirada #" + salva.getId()
+                            + " aberta pelo titular ou por administrador: caso oculto da consulta pública até a decisão.",
                     usuarioId);
         }
 
@@ -123,7 +118,7 @@ public class SolicitacaoService {
         return solicitacoes.map(solicitacaoMapper::toDTO);
     }
 
-    // RN03: de outro titular responde "não localizada", sem confirmar que o id existe
+
     @Transactional(readOnly = true)
     public SolicitacaoResponse buscarMinha(Long id, Long usuarioId) {
         return solicitacaoRepository.findByIdAndUsuarioId(id, usuarioId)
@@ -132,10 +127,7 @@ public class SolicitacaoService {
     }
 
 
-    // ------------------------------------------------------ administrador (RF09, RN07, RN10)
 
-    // RN10: fila priorizada (retirada, depois correção, depois informação; mais antigas primeiro)
-    // Sem status informado, lista só as abertas.
     @Transactional(readOnly = true)
     public Page<SolicitacaoResponse> listarFila(StatusSolicitacao status, Long adminId, Pageable pageable) {
         carregarAdministrador(adminId);
@@ -160,7 +152,7 @@ public class SolicitacaoService {
         return solicitacaoMapper.toDTO(buscarEntidade(id));
     }
 
-    // PENDENTE -> EM_ANALISE: o admin assume a solicitação
+
     @Transactional
     public SolicitacaoResponse iniciarAnalise(Long id, Long adminId) {
         Usuario admin = carregarAdministrador(adminId);
@@ -176,8 +168,6 @@ public class SolicitacaoService {
         return solicitacaoMapper.toDTO(solicitacao);
     }
 
-    // Aprovar RETIRADA retira o caso. Aprovar CORRECAO ou INFORMACAO_ADICIONAL só registra o aceite:
-    // a correção em si é feita pelo admin em CasoService.editar.
     @Transactional
     public SolicitacaoResponse aprovar(Long id, String resposta, Long adminId) {
         return decidir(id, StatusSolicitacao.APROVADA, resposta, adminId);
@@ -189,7 +179,7 @@ public class SolicitacaoService {
     }
 
 
-    // ------------------------------------------------------------------------ privados
+
 
     private SolicitacaoResponse decidir(Long id, StatusSolicitacao decisao, String resposta, Long adminId) {
         Usuario admin = carregarAdministrador(adminId);
@@ -205,7 +195,7 @@ public class SolicitacaoService {
         }
         validarTamanho(texto, LIMITE_RESPOSTA, "resposta");
 
-        // antes de gravar a decisão: se o caso recusar a mudança, tudo é desfeito junto
+
         if (decisao == StatusSolicitacao.APROVADA && solicitacao.getTipo() == TipoSolicitacao.RETIRADA) {
             retirarCaso(solicitacao, texto, adminId);
         }
@@ -215,18 +205,29 @@ public class SolicitacaoService {
         solicitacao.setResponsavel(admin);
         solicitacao.setRespondidoEm(LocalDateTime.now());
 
-        if (decisao == StatusSolicitacao.REJEITADA && solicitacao.getTipo() == TipoSolicitacao.RETIRADA) {
+        if (decisao == StatusSolicitacao.REJEITADA && ocultaCaso(solicitacao)) {
             registrarFimDaOcultacao(solicitacao, adminId);
         }
 
         return solicitacaoMapper.toDTO(solicitacao);
     }
 
-    // retirada rejeitada: o caso volta a aparecer, a não ser que outra retirada ainda esteja em aberto
+
+    // regra de ocultação: retirada pedida pelo titular do caso ou por um administrador
+    private boolean ocultaCaso(Solicitacao solicitacao) {
+        if (solicitacao.getTipo() != TipoSolicitacao.RETIRADA) {
+            return false;
+        }
+        Usuario solicitante = solicitacao.getUsuario();
+        Usuario titular = solicitacao.getCaso().getUsuario();
+
+        boolean ehTitular = titular != null && Objects.equals(titular.getId(), solicitante.getId());
+        return ehTitular || solicitante.getRole() == TipoUsuario.ADMIN;
+    }
+
     private void registrarFimDaOcultacao(Solicitacao solicitacao, Long adminId) {
         Long casoId = solicitacao.getCaso().getId();
-        boolean aindaOculto = solicitacaoRepository.existsByCasoIdAndTipoAndStatusIn(
-                casoId, TipoSolicitacao.RETIRADA, ABERTAS);
+        boolean aindaOculto = solicitacaoRepository.existeRetiradaQueOculta(casoId, ABERTAS);
 
         String observacao = "Solicitação de retirada #" + solicitacao.getId() + " rejeitada: "
                 + (aindaOculto
@@ -239,12 +240,12 @@ public class SolicitacaoService {
     private void retirarCaso(Solicitacao solicitacao, String resposta, Long adminId) {
         Caso caso = solicitacao.getCaso();
 
-        // já retirado/encerrado por outro caminho: nada a fazer no caso, a decisão segue valendo
+
         if (!CASOS_SOLICITAVEIS.contains(caso.getStatus())) {
             return;
         }
 
-        // não copia o texto escrito pelo usuário (pode ter dado pessoal), só o id e a resposta do admin
+
         String observacao = "Retirada aprovada a partir da solicitação #" + solicitacao.getId()
                 + (resposta != null ? ": " + resposta : ".");
 
@@ -257,7 +258,7 @@ public class SolicitacaoService {
                 .orElseThrow(() -> new SolicitacaoNaoEncontrada("Solicitação não localizada!"));
     }
 
-    // mesma defesa da CasoService: não depende só do @PreAuthorize do controller
+
     private Usuario carregarAdministrador(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new UsuarioNaoEncontrado("Usuário não localizado!"));
@@ -268,8 +269,7 @@ public class SolicitacaoService {
         return usuario;
     }
 
-    // visível: qualquer usuário, qualquer tipo. Em análise: só o titular e só correção. Encerrado: ninguém.
-    // Quem não é titular recebe "não localizado" para não saber que o caso existe.
+
     private void validarElegibilidade(Caso caso, TipoSolicitacao tipo, boolean titular) {
         StatusCaso status = caso.getStatus();
 
@@ -324,7 +324,7 @@ public class SolicitacaoService {
         return aparado.isEmpty() ? null : aparado;
     }
 
-    // ignora o sort do cliente (ordenar por propriedade arbitrária pode vazar dado de outras entidades)
+
     private Pageable paginacao(Pageable pageable, Sort ordenacao) {
         int tamanho = Math.min(pageable.getPageSize(), TAMANHO_MAXIMO_PAGINA);
         return PageRequest.of(pageable.getPageNumber(), tamanho, ordenacao);

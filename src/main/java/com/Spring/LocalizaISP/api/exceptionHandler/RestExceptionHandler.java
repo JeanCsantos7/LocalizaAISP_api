@@ -44,7 +44,7 @@ public class RestExceptionHandler {
 
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrosDTO> CredenciaisInvalidas(UsuarioNaoEncontrado exception) {
+    public ResponseEntity<ErrosDTO> CredenciaisInvalidas() {
 
         return ResponseEntity.status(401).body(new ErrosDTO("Credenciais Inválidas, verifique seu email ou senha", 401));
 
@@ -52,10 +52,9 @@ public class RestExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrosDTO> AcessoNegado(UsuarioNaoEncontrado exception) {
+    public ResponseEntity<ErrosDTO> AcessoNegado() {
 
         return ResponseEntity.status(403).body(new ErrosDTO("Acesso Negado, você não tem permissão pra acessar esse recurso!", 403));
-
 
     }
 

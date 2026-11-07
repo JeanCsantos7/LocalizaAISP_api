@@ -23,7 +23,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-
+/**
+ * /solicitacoes/minhas e POST /solicitacoes: usuário autenticado (só as próprias).
+ * /solicitacoes/admin/**: somente ADMIN.
+ * O id do usuário vem sempre do token, nunca do corpo da requisição.
+ */
 @RestController
 @RequestMapping("/solicitacoes")
 @RequiredArgsConstructor
@@ -58,6 +62,8 @@ public class SolicitacaoController {
 
         return ResponseEntity.ok(solicitacaoService.buscarMinha(id, principal.getId()));
     }
+
+
 
 
     @GetMapping("/admin")
@@ -106,7 +112,7 @@ public class SolicitacaoController {
         return ResponseEntity.ok(solicitacaoService.aprovar(id, resposta, principal.getId()));
     }
 
-
+    /** O motivo (resposta) é obrigatório na rejeição. */
     @PatchMapping("/admin/{id}/rejeitar")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SolicitacaoResponse> rejeitar(@PathVariable Long id,

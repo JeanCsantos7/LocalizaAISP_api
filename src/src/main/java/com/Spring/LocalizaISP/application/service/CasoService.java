@@ -127,8 +127,7 @@ public class CasoService {
     public CasoPublicoResponse buscarPublicadoPorId(Long id) {
         Caso caso = casoRepository.findById(id)
                 .filter(c -> STATUS_VISIVEIS.contains(c.getStatus()))
-                .filter(c -> !solicitacaoRepository.existsByCasoIdAndTipoAndStatusIn(
-                        c.getId(), TipoSolicitacao.RETIRADA, SOLICITACOES_ABERTAS))
+                .filter(c -> !solicitacaoRepository.existeRetiradaQueOculta(c.getId(), SOLICITACOES_ABERTAS))
                 .orElseThrow(() -> new CasoNaoEncontrado("Caso não localizado!"));
 
         return casoMapper.toPublicoDTO(caso);
@@ -220,7 +219,7 @@ public class CasoService {
     }
 
 
-    // grava no histórico um evento relevante que não muda o status (ex.: ocultação por pedido de retirada)
+
     @Transactional
     public void registrarEvento(Long casoId, String observacao, Long usuarioId) {
         Caso caso = buscarEntidade(casoId);
@@ -263,7 +262,8 @@ public class CasoService {
 
 
 
-    // caso com solicitação de RETIRADA em aberto não aparece na consulta pública
+    // caso com retirada em aberto pedida pelo titular ou por administrador não aparece na consulta pública
+    // (retirada de terceiro não oculta: só vai para análise)
     private Specification<Caso> semRetiradaEmAberto() {
         return (root, query, cb) -> {
             Subquery<Long> retiradaAberta = query.subquery(Long.class);
@@ -271,7 +271,10 @@ public class CasoService {
             retiradaAberta.select(solicitacao.<Long>get("id")).where(
                     cb.equal(solicitacao.get("caso").get("id"), root.get("id")),
                     cb.equal(solicitacao.get("tipo"), TipoSolicitacao.RETIRADA),
-                    solicitacao.get("status").in(SOLICITACOES_ABERTAS));
+                    solicitacao.get("status").in(SOLICITACOES_ABERTAS),
+                    cb.or(
+                            cb.equal(solicitacao.get("usuario").get("id"), root.get("usuario").get("id")),
+                            cb.equal(solicitacao.get("usuario").get("role"), TipoUsuario.ADMIN)));
             return cb.not(cb.exists(retiradaAberta));
         };
     }

@@ -27,7 +27,16 @@ public interface SolicitacaoRepository extends JpaRepository<Solicitacao, Long> 
 
     long countByUsuarioIdAndStatusIn(Long usuarioId, Collection<StatusSolicitacao> status);
 
-    boolean existsByCasoIdAndTipoAndStatusIn(Long casoId, TipoSolicitacao tipo, Collection<StatusSolicitacao> status);
+    // so retirada aberta pelo titular do caso ou por administrador oculta o caso; a de terceiro apenas entra na fila
+    @Query("""
+            select count(s) > 0 from Solicitacao s
+            where s.caso.id = :casoId
+              and s.tipo = com.Spring.LocalizaISP.domain.enums.TipoSolicitacao.RETIRADA
+              and s.status in :status
+              and (s.usuario.id = s.caso.usuario.id
+                   or s.usuario.role = com.Spring.LocalizaISP.domain.enums.TipoUsuario.ADMIN)
+            """)
+    boolean existeRetiradaQueOculta(@Param("casoId") Long casoId, @Param("status") Collection<StatusSolicitacao> status);
 
     // RN10: retirada primeiro (risco de exposicao indevida), depois correcao, depois informacao; mais antigas antes
     @Query(value = """

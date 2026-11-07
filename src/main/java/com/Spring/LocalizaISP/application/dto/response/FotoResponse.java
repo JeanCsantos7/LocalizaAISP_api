@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record FotoResponse(
-		UUID id,
+		Long id,
 		String url,
 		String legenda,
 		Boolean principal,

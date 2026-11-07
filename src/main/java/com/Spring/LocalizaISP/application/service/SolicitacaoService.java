@@ -96,9 +96,11 @@ public class SolicitacaoService {
         Solicitacao salva = solicitacaoRepository.save(solicitacao);
 
 
-        if (salva.getTipo() == TipoSolicitacao.RETIRADA) {
+
+        if (ocultaCaso(salva)) {
             casoService.registrarEvento(caso.getId(),
-                    "Solicitação de retirada #" + salva.getId() + " aberta: caso oculto da consulta pública até a decisão.",
+                    "Solicitação de retirada #" + salva.getId()
+                            + " aberta pelo titular ou por administrador: caso oculto da consulta pública até a decisão.",
                     usuarioId);
         }
 
@@ -203,7 +205,7 @@ public class SolicitacaoService {
         solicitacao.setResponsavel(admin);
         solicitacao.setRespondidoEm(LocalDateTime.now());
 
-        if (decisao == StatusSolicitacao.REJEITADA && solicitacao.getTipo() == TipoSolicitacao.RETIRADA) {
+        if (decisao == StatusSolicitacao.REJEITADA && ocultaCaso(solicitacao)) {
             registrarFimDaOcultacao(solicitacao, adminId);
         }
 
@@ -211,10 +213,21 @@ public class SolicitacaoService {
     }
 
 
+
+    private boolean ocultaCaso(Solicitacao solicitacao) {
+        if (solicitacao.getTipo() != TipoSolicitacao.RETIRADA) {
+            return false;
+        }
+        Usuario solicitante = solicitacao.getUsuario();
+        Usuario titular = solicitacao.getCaso().getUsuario();
+
+        boolean ehTitular = titular != null && Objects.equals(titular.getId(), solicitante.getId());
+        return ehTitular || solicitante.getRole() == TipoUsuario.ADMIN;
+    }
+
     private void registrarFimDaOcultacao(Solicitacao solicitacao, Long adminId) {
         Long casoId = solicitacao.getCaso().getId();
-        boolean aindaOculto = solicitacaoRepository.existsByCasoIdAndTipoAndStatusIn(
-                casoId, TipoSolicitacao.RETIRADA, ABERTAS);
+        boolean aindaOculto = solicitacaoRepository.existeRetiradaQueOculta(casoId, ABERTAS);
 
         String observacao = "Solicitação de retirada #" + solicitacao.getId() + " rejeitada: "
                 + (aindaOculto

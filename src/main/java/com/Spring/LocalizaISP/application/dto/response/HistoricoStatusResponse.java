@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record HistoricoStatusResponse(
-		UUID id,
+		Long id,
 		StatusCaso statusAnterior,
 		StatusCaso statusAtual,
 		String observacao,
