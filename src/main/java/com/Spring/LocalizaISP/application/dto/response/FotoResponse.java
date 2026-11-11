@@ -1,7 +1,6 @@
 package com.Spring.LocalizaISP.application.dto.response;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 public record FotoResponse(
 		Long id,
@@ -9,6 +8,6 @@ public record FotoResponse(
 		String legenda,
 		Boolean principal,
 		LocalDateTime criadoEm,
-		UUID casoId
+		Long casoId
 ) {
 }

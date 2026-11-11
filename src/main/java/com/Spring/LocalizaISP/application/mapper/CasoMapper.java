@@ -8,7 +8,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = InformacaoContatoMapper.class)
 public interface CasoMapper {
 
     @Mapping(target = "id", ignore = true)
@@ -24,6 +24,7 @@ public interface CasoMapper {
     Caso toEntity(CasoRequest dados);
 
     @Mapping(source = "usuario.id", target = "usuarioId")
+    @Mapping(source = "informacoesContato", target = "informacaoContatos")
     CasoResponse toDTO(Caso caso);
 
     CasoPublicoResponse toPublicoDTO(Caso caso);

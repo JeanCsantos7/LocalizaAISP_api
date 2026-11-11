@@ -38,11 +38,13 @@ public class SecurityConfig {
 
                         auth.requestMatchers(HttpMethod.POST, "/usuarios/login", "/usuarios/criarConta").permitAll()
 
+                                .requestMatchers(HttpMethod.GET, "/fotos/caso/**").permitAll()
                                 .requestMatchers("/casos/admin/**").hasRole("ADMIN")
                                 .requestMatchers("/casos/meus/**").hasAnyRole("ADMIN", "USUARIO")
                                 .requestMatchers(HttpMethod.POST, "/casos").hasAnyRole("ADMIN", "USUARIO")
                                 .requestMatchers(HttpMethod.GET, "/casos", "/casos/{id:\\d+}").permitAll()
                                 .requestMatchers("/solicitacoes/admin/**").hasRole("ADMIN")
+                                .requestMatchers("/historico/**").hasRole("ADMIN")
                                 .requestMatchers("/solicitacoes/**").hasAnyRole("ADMIN", "USUARIO")
                                 .requestMatchers(HttpMethod.GET, "/usuarios").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.POST, "/usuarios/**").hasAnyRole("ADMIN", "USUARIO")

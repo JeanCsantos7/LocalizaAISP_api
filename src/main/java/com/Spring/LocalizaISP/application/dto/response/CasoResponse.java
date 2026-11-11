@@ -5,6 +5,7 @@ import com.Spring.LocalizaISP.domain.enums.StatusCaso;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record CasoResponse(
 		Long id,
@@ -21,6 +22,7 @@ public record CasoResponse(
 		String observacoes,
 		LocalDateTime criadoEm,
 		LocalDateTime atualizadoEm,
+		List<InformacaoContatoResponse> informacaoContatos,
 		Long usuarioId
 ) {
 }

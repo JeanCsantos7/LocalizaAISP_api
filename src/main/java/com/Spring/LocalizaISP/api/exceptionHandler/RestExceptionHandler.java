@@ -1,6 +1,7 @@
 package com.Spring.LocalizaISP.api.exceptionHandler;
 
 import com.Spring.LocalizaISP.application.dto.exceptionsDTO.*;
+import com.Spring.LocalizaISP.infrastructure.exception.ArmazenamentoException;
 import com.Spring.LocalizaISP.infrastructure.exception.CasoNaoEncontrado;
 import com.Spring.LocalizaISP.infrastructure.exception.EmailExistente;
 import com.Spring.LocalizaISP.infrastructure.exception.RegraNegocioException;
@@ -13,6 +14,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -95,6 +97,18 @@ public class RestExceptionHandler {
     public ResponseEntity<ErrosDTO> emailExistente(EmailExistente exception) {
 
        return ResponseEntity.status(409).body(new ErrosDTO(exception.getMessage(), 409));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrosDTO> arquivoGrande(MaxUploadSizeExceededException exception) {
+
+        return ResponseEntity.status(413).body(new ErrosDTO("A imagem excede o tamanho máximo de 5MB.", 413));
+    }
+
+    @ExceptionHandler(ArmazenamentoException.class)
+    public ResponseEntity<ErrosDTO> armazenamento(ArmazenamentoException exception) {
+
+        return ResponseEntity.status(502).body(new ErrosDTO(exception.getMessage(), 502));
     }
 
     @ExceptionHandler(Exception.class)

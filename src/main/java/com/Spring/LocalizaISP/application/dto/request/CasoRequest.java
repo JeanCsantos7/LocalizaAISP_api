@@ -1,11 +1,14 @@
 package com.Spring.LocalizaISP.application.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record CasoRequest(
 		@NotBlank(message = "O título é obrigatório")
@@ -41,6 +44,10 @@ public record CasoRequest(
 		String fonteAutorizacao,
 
 		@Size(max = 2000, message = "As observações devem ter no máximo 2000 caracteres")
-		String observacoes
+		String observacoes,
+
+		@NotEmpty(message = "Informe ao menos um contato")
+		@Valid
+		List<InformacaoContatoRequest> contatos
 ) {
 }

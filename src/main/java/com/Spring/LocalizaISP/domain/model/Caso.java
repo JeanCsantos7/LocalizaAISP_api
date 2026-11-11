@@ -2,6 +2,7 @@ package com.Spring.LocalizaISP.domain.model;
 
 import com.Spring.LocalizaISP.domain.enums.OrigemCaso;
 import com.Spring.LocalizaISP.domain.enums.StatusCaso;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -82,7 +83,7 @@ public class Caso {
 	@OneToMany(mappedBy = "caso")
 	private List<Solicitacao> solicitacoes = new ArrayList<>();
 
-	@OneToMany(mappedBy = "caso")
+	@OneToMany(mappedBy = "caso", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<InformacaoContato> informacoesContato = new ArrayList<>();
 
 }

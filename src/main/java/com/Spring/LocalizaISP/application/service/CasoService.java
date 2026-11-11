@@ -2,25 +2,21 @@ package com.Spring.LocalizaISP.application.service;
 
 import com.Spring.LocalizaISP.application.dto.request.AtualizarStatusCasoRequest;
 import com.Spring.LocalizaISP.application.dto.request.CasoRequest;
+import com.Spring.LocalizaISP.application.dto.request.InformacaoContatoRequest;
 import com.Spring.LocalizaISP.application.dto.response.CasoPublicoResponse;
 import com.Spring.LocalizaISP.application.dto.response.CasoResponse;
 import com.Spring.LocalizaISP.application.mapper.CasoMapper;
+import com.Spring.LocalizaISP.application.mapper.InformacaoContatoMapper;
 import com.Spring.LocalizaISP.domain.enums.OrigemCaso;
 import com.Spring.LocalizaISP.domain.enums.StatusCaso;
 import com.Spring.LocalizaISP.domain.enums.StatusSolicitacao;
 import com.Spring.LocalizaISP.domain.enums.TipoSolicitacao;
 import com.Spring.LocalizaISP.domain.enums.TipoUsuario;
-import com.Spring.LocalizaISP.domain.model.Caso;
-import com.Spring.LocalizaISP.domain.model.HistoricoStatus;
-import com.Spring.LocalizaISP.domain.model.Solicitacao;
-import com.Spring.LocalizaISP.domain.model.Usuario;
+import com.Spring.LocalizaISP.domain.model.*;
 import com.Spring.LocalizaISP.infrastructure.exception.CasoNaoEncontrado;
 import com.Spring.LocalizaISP.infrastructure.exception.RegraNegocioException;
 import com.Spring.LocalizaISP.infrastructure.exception.UsuarioNaoEncontrado;
-import com.Spring.LocalizaISP.infrastructure.repository.CasoRepository;
-import com.Spring.LocalizaISP.infrastructure.repository.HistoricoStatusRepository;
-import com.Spring.LocalizaISP.infrastructure.repository.SolicitacaoRepository;
-import com.Spring.LocalizaISP.infrastructure.repository.UsuarioRepository;
+import com.Spring.LocalizaISP.infrastructure.repository.*;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +48,7 @@ public class CasoService {
     private static final int LIMITE_CAMPO_LONGO = 2000;
 
 
+
     private static final Map<StatusCaso, Set<StatusCaso>> TRANSICOES_PERMITIDAS = Map.of(
             StatusCaso.PENDENTE, EnumSet.of(StatusCaso.PUBLICADO, StatusCaso.REJEITADO),
             StatusCaso.PUBLICADO, EnumSet.of(StatusCaso.LOCALIZADO, StatusCaso.RETIRADO),
@@ -76,6 +73,7 @@ public class CasoService {
     private final HistoricoStatusRepository historicoStatusRepository;
     private final SolicitacaoRepository solicitacaoRepository;
     private final CasoMapper casoMapper;
+    private final InformacaoContatoMapper informacaoContatoMapper;
 
 
     @Transactional(readOnly = true)
@@ -143,6 +141,7 @@ public class CasoService {
                 .orElseThrow(() -> new UsuarioNaoEncontrado("Usuário não localizado ou inativo!"));
 
         Caso caso = casoMapper.toEntity(dados);
+
         normalizar(caso);
 
         LocalDateTime agora = LocalDateTime.now();
@@ -151,6 +150,14 @@ public class CasoService {
         caso.setUsuario(usuario);
         caso.setCriadoEm(agora);
         caso.setAtualizadoEm(agora);
+
+        for (InformacaoContatoRequest dto : dados.contatos()) {
+            InformacaoContato contato = informacaoContatoMapper.toEntity(dto);
+            contato.setCaso(caso);
+            contato.setUsuario(usuario);
+            contato.setCriadoEm(agora);
+            caso.getInformacoesContato().add(contato);
+        }
 
         return casoMapper.toDTO(casoRepository.save(caso));
     }
